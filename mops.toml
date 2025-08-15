@@ -1,4 +1,4 @@
-# Motoko dependencies (https://mops.one/)
-
 [dependencies]
-base = "0.14.9"
+base = "0.28.0"
+ed25519 = "0.3.0"
+sha2 = "0.3.0"
