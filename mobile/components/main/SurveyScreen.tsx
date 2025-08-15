@@ -5,9 +5,7 @@ import { generateSeedAndKeys, restoreKeys, authenticateUser, updateUserProfile }
 type Props = { onComplete?: () => void; };
 
 const questions = [
-  "Ваш нікнейм?",
-  "Що вам подобається у Web3?",
-  "Ваш улюблений колір?"
+    ''
 ];
 
 export default function SurveyScreen({ onComplete }: Props) {
@@ -23,7 +21,7 @@ export default function SurveyScreen({ onComplete }: Props) {
       setPubKeyHex(keys.pubKeyHex);
 
       const ok = await authenticateUser();
-      if (!ok) Alert.alert("Помилка", "Не вдалося пройти автентифікацію");
+      if (!ok) Alert.alert("Error", "You cant auth");
       setLoading(false);
     })();
   }, []);
@@ -44,16 +42,16 @@ export default function SurveyScreen({ onComplete }: Props) {
     setLoading(true);
     const nickname = answers[0] || "User";
     const surveyData = JSON.stringify(answers);
-    const avatarBase64 = ""; // TODO: додати вибір аватара
+    const avatarBase64 = "";
 
     const success = await updateUserProfile(pubKeyHex, nickname, avatarBase64, surveyData);
     setLoading(false);
 
     if (success) {
-      Alert.alert("Дякуємо", "Ваші відповіді збережені!");
+      Alert.alert("Thanks", "Your data saved");
       onComplete?.();
     } else {
-      Alert.alert("Помилка", "Не вдалося зберегти дані");
+      Alert.alert("Error", "We can not save you data");
     }
   };
 
@@ -61,7 +59,7 @@ export default function SurveyScreen({ onComplete }: Props) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" />
-        <Text>Завантаження...</Text>
+        <Text>Loading...</Text>
       </View>
     );
   }
@@ -73,9 +71,9 @@ export default function SurveyScreen({ onComplete }: Props) {
         style={styles.input}
         value={answers[index]}
         onChangeText={onChangeAnswer}
-        placeholder="Введіть вашу відповідь"
+        placeholder="Enter your answer"
       />
-      <Button title={index === questions.length - 1 ? "Завершити" : "Далі"} onPress={onNext} />
+      <Button title={index === questions.length - 1 ? "Done" : "Next"} onPress={onNext} />
     </View>
   );
 }
