@@ -9,7 +9,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 
 import SplashScreen from './SplashScreen';
 
-import { restoreKeys, authenticateUser } from '../services/authCanister';
+import { restoreKeys, authenticateUser } from '../services/authService';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -18,31 +18,33 @@ export default function RootLayout() {
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  const [showSplash, setShowSplash] = useState(true);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 3000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
     (async () => {
-      //TODO
-      //const keys = await restoreKeys();
-      //if (keys) {
-        //const auth = await authenticateUser();
-      //  setIsAuthenticated(false); //TODO: edit for auth
-      //} else {
-      //  setIsAuthenticated(false);
-      //}
-      setIsAuthenticated(false);
+      try {
+        const keys = await restoreKeys();
+        if (keys) {
+          const auth = await authenticateUser();
+          setIsAuthenticated(auth);
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (err) {
+        console.error('Auth check failed', err);
+        setIsAuthenticated(false);
+      } finally {
+        // Затримка для показу сплешу мінімум 1.5с (опціонально)
+        setTimeout(() => setIsCheckingAuth(false), 1500);
+      }
     })();
   }, []);
 
-  if (showSplash) return <SplashScreen />;
-
-  if (!fontsLoaded || isAuthenticated === null) return null;
+  // Поки шрифти або автентифікація не готові — показуємо сплеш
+  if (!fontsLoaded || isCheckingAuth || isAuthenticated === null) {
+    return <SplashScreen />;
+  }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
