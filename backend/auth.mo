@@ -6,7 +6,7 @@ import Nat32 "mo:base/Nat32";
 import Int "mo:base/Int";
 import Time "mo:base/Time";
 
-actor Auth {
+persistent actor Auth {
 
   type UserProfile = {
     pubKeys : [[Nat8]];
@@ -15,9 +15,8 @@ actor Auth {
     surveyData : Text;
   };
 
-  var profiles : [UserProfile] = [];
+  transient var profiles : [UserProfile] = [];
 
-  // Порівняння ключів
   func keyEqual(a : [Nat8], b : [Nat8]) : Bool {
     Array.equal<Nat8>(a, b, Nat8.equal)
   };
@@ -32,14 +31,14 @@ actor Auth {
     Array.freeze(bytes)
   };
 
-func nat32ToBytes(n : Nat32) : [Nat8] {
+  func nat32ToBytes(n : Nat32) : [Nat8] {
     let mask : Nat32 = Nat32.fromNat(255);
     Array.tabulate<Nat8>(4, func(i) {
         let sh : Nat = 8 * (3 - i);
         let part : Nat32 = (n >> Nat32.fromNat(sh)) & mask;
         Nat8.fromNat(Nat32.toNat(part))
     })
-};
+  };
 
   func fnv1a32(bytes : [Nat8]) : Nat32 {
     let FNV_OFFSET_BASIS : Nat32 = 2166136261;
@@ -59,29 +58,20 @@ func nat32ToBytes(n : Nat32) : [Nat8] {
     nat32ToBytes(h)
   };
 
-  func verifySignature(_pubKey : [Nat8], _signature : [Nat8], _challenge : [Nat8]) : Bool { true };
-
-  public func authenticate(pubKey : [Nat8], _challenge : [Nat8], _signature : [Nat8]) : async Bool {
-    var found = false;
-
-    label search for (p in profiles.vals()) {
-      if (Array.find<[Nat8]>(p.pubKeys, func(k : [Nat8]) { keyEqual(k, pubKey) }) != null) {
-        found := true;
-        break search;
-      };
-    };
-
-    if (not found) {
-      let profile : UserProfile = {
-        pubKeys = [pubKey];
-        nickname = "User";
-        avatar = [];
-        surveyData = "";
-      };
-      profiles := Array.append<UserProfile>(profiles, [profile]);
-    };
-
+  func verifySignature(_pubKey : [Nat8], _signature : [Nat8], _challenge : [Nat8]) : Bool {
+    // TODO: Реальна перевірка підпису
     true
+  };
+
+  public func authenticate(pubKey : [Nat8], challengeBytes : [Nat8], signature : [Nat8]) : async Bool {
+    for (p in profiles.vals()) {
+      if (Array.find<[Nat8]>(p.pubKeys, func(k : [Nat8]) { keyEqual(k, pubKey) }) != null) {
+        if (verifySignature(pubKey, signature, challengeBytes)) {
+          return true;
+        };
+      };
+    };
+    false
   };
 
   public query func getProfile(pubKey : [Nat8]) : async ?UserProfile {
@@ -91,5 +81,37 @@ func nat32ToBytes(n : Nat32) : [Nat8] {
       };
     };
     null
+  };
+
+  public func updateProfile(pubKey : [Nat8], nickname : Text, avatar : [Nat8], surveyData : Text) : async Bool {
+    var updated = false;
+    var newProfiles : [UserProfile] = [];
+
+    for (p in profiles.vals()) {
+      if (Array.find<[Nat8]>(p.pubKeys, func(k : [Nat8]) { keyEqual(k, pubKey) }) != null) {
+        newProfiles := Array.append<UserProfile>(newProfiles, [{
+          pubKeys = p.pubKeys;
+          nickname = nickname;
+          avatar = avatar;
+          surveyData = surveyData;
+        }]);
+        updated := true;
+      } else {
+        newProfiles := Array.append<UserProfile>(newProfiles, [p]);
+      };
+    };
+
+    if (not updated) {
+      let profile : UserProfile = {
+        pubKeys = [pubKey];
+        nickname = nickname;
+        avatar = avatar;
+        surveyData = surveyData;
+      };
+      newProfiles := Array.append<UserProfile>(newProfiles, [profile]);
+    };
+
+    profiles := newProfiles;
+    true
   };
 };

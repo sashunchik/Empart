@@ -5,11 +5,19 @@
       "type": "motoko",
       "args": "--enhanced-orthogonal-persistence"
     },
-    "auth": {
-      "type": "motoko",
-      "main": "backend/auth.mo",
-      "args": "--stable-types"
+    "frontend": {
+      "dependencies": ["backend"],
+      "frontend": {
+        "entrypoint": "frontend/index.html"
+      },
+      "source": ["frontend/dist"],
+      "type": "assets"
     }
   },
-  "output_env_file": ".env"
+  "output_env_file": ".env",
+  "defaults": {
+    "build": {
+      "packtool": "mops sources"
+    }
+  }
 }
