@@ -1,79 +1,34 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, Button, StyleSheet, ActivityIndicator, Alert, TextInput } from "react-native";
-import { generateSeedAndKeys, restoreKeys, authenticateUser, updateUserProfile } from "../../services/authService";
+import React, { useState } from "react";
+import { View, Text, Button, StyleSheet } from "react-native";
+import { useTheme } from "../theme/ThemeProvider";
+import { surveyData } from "../../constants/surveyData";
+import QuestionRenderer from "../question/QuestionRenderer";
 
-type Props = { onComplete?: () => void; };
-
-const questions = [
-    ''
-];
-
-export default function SurveyScreen({ onComplete }: Props) {
+export default function SurveyScreen({ onComplete }: any) {
   const [index, setIndex] = useState(0);
-  const [answers, setAnswers] = useState<string[]>(Array(questions.length).fill(""));
-  const [loading, setLoading] = useState(true);
-  const [pubKeyHex, setPubKeyHex] = useState<string | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      let keys = await restoreKeys();
-      if (!keys) keys = await generateSeedAndKeys();
-      setPubKeyHex(keys.pubKeyHex);
-
-      const ok = await authenticateUser();
-      if (!ok) Alert.alert("Error", "You cant auth");
-      setLoading(false);
-    })();
-  }, []);
+  const [answers, setAnswers] = useState<any>({});
+  const theme = useTheme();
 
   const onNext = () => {
-    if (index < questions.length - 1) setIndex(index + 1);
-    else finishSurvey();
+    if (index < surveyData.length - 1) setIndex(index + 1);
+    else onComplete?.();
   };
 
-  const onChangeAnswer = (text: string) => {
-    const newAnswers = [...answers];
-    newAnswers[index] = text;
-    setAnswers(newAnswers);
+  const onChangeAnswer = (val: any) => {
+    setAnswers((prev: any) => ({ ...prev, [surveyData[index].id]: val }));
   };
 
-  const finishSurvey = async () => {
-    if (!pubKeyHex) return;
-    setLoading(true);
-    const nickname = answers[0] || "User";
-    const surveyData = JSON.stringify(answers);
-    const avatarBase64 = "";
-
-    const success = await updateUserProfile(pubKeyHex, nickname, avatarBase64, surveyData);
-    setLoading(false);
-
-    if (success) {
-      Alert.alert("Thanks", "Your data saved");
-      onComplete?.();
-    } else {
-      Alert.alert("Error", "We can not save you data");
-    }
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" />
-        <Text>Loading...</Text>
-      </View>
-    );
-  }
+  const question = surveyData[index];
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.question}>{questions[index]}</Text>
-      <TextInput
-        style={styles.input}
-        value={answers[index]}
-        onChangeText={onChangeAnswer}
-        placeholder="Enter your answer"
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <Text style={[styles.question, { color: theme.text }]}>{question.text}</Text>
+      <QuestionRenderer question={question} value={answers[question.id]} onChange={onChangeAnswer} />
+      <Button
+        title={index === surveyData.length - 1 ? "Done" : "Next"}
+        onPress={onNext}
+        color={theme.primary}
       />
-      <Button title={index === questions.length - 1 ? "Done" : "Next"} onPress={onNext} />
     </View>
   );
 }
@@ -81,5 +36,4 @@ export default function SurveyScreen({ onComplete }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", padding: 20 },
   question: { fontSize: 20, marginBottom: 20 },
-  input: { borderWidth: 1, borderColor: "#ccc", padding: 10, marginBottom: 20, borderRadius: 5 }
 });
